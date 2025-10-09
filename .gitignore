@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+
+# Node modules
+blockchain/node_modules
+
+# Compilation output
+blockchain/dist
+
+# pnpm deploy output
+blockchain/bundle
+
+# Hardhat Build Artifacts
+blockchain/artifacts
+
+# Hardhat compilation (v2) support directory
+blockchain/cache
+
+# Typechain output
+blockchain/types
+
+# Hardhat coverage reports
+blockchain/coverage
