@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
+import { SessionRepository } from '../repositories/session.repository';
+import { SessionUseCases } from '../usecases/session.usecase';
+import { SESSION_CONFIG } from '../config/session';
 
 declare global {
   namespace Express {
@@ -8,24 +10,33 @@ declare global {
         address: string;
         chainId?: number;
       };
+      sessionId?: string;
     }
   }
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+const sessionRepo = new SessionRepository();
+const sessionUseCases = new SessionUseCases(sessionRepo);
 
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
+export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const sessionId = req.cookies[SESSION_CONFIG.cookieName];
+
+  if (!sessionId) {
+    return res.status(401).json({ error: 'No session found' });
   }
 
-  const token = authHeader.substring(7);
-  const payload = verifyToken(token);
+  const session = await sessionUseCases.getSessionAndValidate(sessionId);
 
-  if (!payload) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  if (!session) {
+    res.clearCookie(SESSION_CONFIG.cookieName);
+    return res.status(401).json({ error: 'Invalid or expired session' });
   }
 
-  req.user = payload;
+  req.user = {
+    address: session.address,
+    chainId: session.chain_id,
+  };
+  req.sessionId = sessionId;
+
   next();
 }

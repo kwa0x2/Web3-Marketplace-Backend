@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id          String    @id @default(uuid())
+  address     String    @unique @db.VarChar(42) // Wallet address (0x...)
+  chainId     Int?                               // Connected chain ID
+
+  // Authentication
+  nonce       String?   @db.VarChar(500)         // Random nonce for signature verification
+  nonceExpiry DateTime?                          // Nonce expiration time
+
+  // Profile (optional - user can fill later)
+  avatar      String?                            // Avatar URL or IPFS hash
+  bio         String?   @db.VarChar(500)
+  website     String?   @db.VarChar(255)
+  twitter     String?   @db.VarChar(100)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  lastLoginAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@map("users")
+}
