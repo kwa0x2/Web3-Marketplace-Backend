@@ -80,7 +80,7 @@ export class AuthUseCases implements IAuthUseCases {
 
     const updatedUser = await this.userRepo.findByAddress(normalizedAddress);
 
-    console.log(`✅ Session created for ${normalizedAddress}`);
+    console.log(`Session created for ${normalizedAddress}`);
 
     return {
       session,
