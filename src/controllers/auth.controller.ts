@@ -9,12 +9,6 @@ export class AuthController {
     private sessionUseCases?: SessionUseCases
   ) {}
 
-  /**
-   * POST /api/auth/nonce
-   * Step 1: Generate nonce for wallet to sign
-   * Body: { address: "0x..." }
-   * Response: { message: "Sign this...", nonce: "abc123..." }
-   */
   async generateNonce(req: Request, res: Response) {
     try {
       const { address } = req.body;
@@ -37,12 +31,6 @@ export class AuthController {
     }
   }
 
-  /**
-   * POST /api/auth/verify
-   * Step 2: Verify signed message and authenticate
-   * Body: { signature: "0x...", address: "0x...", chainId?: 1 }
-   * Response: Sets httpOnly cookie and returns { user: {...} }
-   */
   async verifySignature(req: Request, res: Response) {
     try {
       const { signature, address, chainId } = req.body;
@@ -83,11 +71,6 @@ export class AuthController {
     }
   }
 
-  /**
-   * GET /api/auth/me
-   * Get current authenticated user (requires session cookie)
-   * Response: { user: {...} }
-   */
   async getCurrentUser(req: Request, res: Response) {
     try {
       if (!req.user?.address) {
@@ -112,10 +95,6 @@ export class AuthController {
     }
   }
 
-  /**
-   * POST /api/auth/logout
-   * Logout user by clearing session
-   */
   async logout(req: Request, res: Response) {
     try {
       const sessionId = req.cookies[SESSION_CONFIG.cookieName];

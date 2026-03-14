@@ -1,4 +1,3 @@
--- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "address" VARCHAR(42) NOT NULL,
@@ -16,5 +15,4 @@ CREATE TABLE "users" (
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
 CREATE UNIQUE INDEX "users_address_key" ON "users"("address");

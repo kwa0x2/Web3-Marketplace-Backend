@@ -10,10 +10,9 @@ datasource db {
 
 model User {
   id          String    @id @default(uuid())
-  address     String    @unique @db.VarChar(42) // Wallet address (0x...)
-  chainId     Int?                               // Connected chain ID
+  address     String    @unique @db.VarChar(42)
+  chainId     Int?                               
 
-  // Authentication
   nonce       String?   @db.VarChar(500)         // Random nonce for signature verification
   nonceExpiry DateTime?                          // Nonce expiration time
 
@@ -23,10 +22,37 @@ model User {
   website     String?   @db.VarChar(255)
   twitter     String?   @db.VarChar(100)
 
-  // Timestamps
   createdAt   DateTime  @default(now())
   lastLoginAt DateTime?
   updatedAt   DateTime  @updatedAt
 
+  nfts        Nft[]
+
   @@map("users")
+}
+
+model Nft {
+  id              String   @id @default(uuid())
+  tokenId         Int?                          // On-chain token ID (null until minted)
+  chainId         Int                           // Chain where NFT was minted
+  contractAddress String   @db.VarChar(42)      
+
+  name            String   @db.VarChar(100)
+  description     String?  @db.VarChar(1000)
+  category        String?
+  fileUri         String                       
+  metadataUri     String                       
+  royaltyBps      Int      @default(1000)      
+
+  creatorAddress  String   @db.VarChar(42)
+  creator         User     @relation(fields: [creatorAddress], references: [address])
+
+  txHash          String?  @db.VarChar(66)      // Mint transaction hash
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([creatorAddress])
+  @@index([chainId, tokenId])
+  @@map("nfts")
 }

@@ -19,17 +19,13 @@ app.get('/', (req: Request, res: Response) => {
   res.json({
     name: 'Web3 Marketplace API',
     version: '1.0.0',
-    endpoints: {
-      v1: '/api/v1',
-      health: '/health',
-      docs: '/api/v1/docs',
-    },
+    github: 'https://github.com/kwa0x2',
+    linkedin: 'https://www.linkedin.com/in/alper-karakoyun-8b195921a/'
   });
 });
 
 app.use('/api/v1', createV1Routes());
 
-// Health check
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
@@ -38,7 +34,6 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: 'Not Found',
@@ -46,7 +41,6 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Error handler
 app.use((err: Error, req: Request, res: Response, next: any) => {
   console.error('Error:', err);
   res.status(500).json({
