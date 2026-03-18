@@ -13,11 +13,11 @@ model User {
   address     String    @unique @db.VarChar(42)
   chainId     Int?                               
 
-  nonce       String?   @db.VarChar(500)         // Random nonce for signature verification
-  nonceExpiry DateTime?                          // Nonce expiration time
+  nonce       String?   @db.VarChar(500)         
+  nonceExpiry DateTime?                          
 
   // Profile (optional - user can fill later)
-  avatar      String?                            // Avatar URL or IPFS hash
+  avatar      String?                            
   bio         String?   @db.VarChar(500)
   website     String?   @db.VarChar(255)
   twitter     String?   @db.VarChar(100)
@@ -27,32 +27,60 @@ model User {
   updatedAt   DateTime  @updatedAt
 
   nfts        Nft[]
+  collections Collection[]
 
   @@map("users")
 }
 
-model Nft {
+model Collection {
   id              String   @id @default(uuid())
-  tokenId         Int?                          // On-chain token ID (null until minted)
-  chainId         Int                           // Chain where NFT was minted
-  contractAddress String   @db.VarChar(42)      
-
   name            String   @db.VarChar(100)
+  symbol          String   @db.VarChar(10)
   description     String?  @db.VarChar(1000)
-  category        String?
-  fileUri         String                       
-  metadataUri     String                       
-  royaltyBps      Int      @default(1000)      
+  image           String?
+  verified        Boolean  @default(false)
 
-  creatorAddress  String   @db.VarChar(42)
-  creator         User     @relation(fields: [creatorAddress], references: [address])
+  ownerAddress    String   @db.VarChar(42)
+  owner           User     @relation(fields: [ownerAddress], references: [address])
 
-  txHash          String?  @db.VarChar(66)      // Mint transaction hash
+  nfts            Nft[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  @@index([ownerAddress])
+  @@map("collections")
+}
+
+model Nft {
+  id              String      @id @default(uuid())
+  tokenId         Int?                             // On-chain token ID (null until minted)
+  chainId         Int                              
+  contractAddress String      @db.VarChar(42)
+
+  name            String      @db.VarChar(100)
+  description     String?     @db.VarChar(1000)
+  category        String?
+  fileUri         String
+  metadataUri     String
+  royaltyBps      Int         @default(1000)
+  price           Float?                           // Listed price (null = not for sale)
+  currency        String?     @db.VarChar(10)      
+
+  collectionId    String?
+  collection      Collection? @relation(fields: [collectionId], references: [id])
+
+  creatorAddress  String      @db.VarChar(42)
+  creator         User        @relation(fields: [creatorAddress], references: [address])
+  ownerAddress    String?     @db.VarChar(42)      // Current owner (null = creator is owner)
+
+  txHash          String?     @db.VarChar(66) 
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
   @@index([creatorAddress])
+  @@index([collectionId])
   @@index([chainId, tokenId])
   @@map("nfts")
 }

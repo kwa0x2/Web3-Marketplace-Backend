@@ -6,6 +6,68 @@ const ipfsService = new IPFSService();
 const prisma = new PrismaClient();
 
 export class NFTController {
+  async list(req: Request, res: Response) {
+    try {
+      const { category, creator, listed, page = '1', limit = '20' } = req.query;
+
+      const take = Math.min(parseInt(limit as string) || 20, 100);
+      const skip = (Math.max(parseInt(page as string) || 1, 1) - 1) * take;
+
+      const where: any = {};
+      if (category) where.category = category;
+      if (creator) where.creatorAddress = creator;
+      if (listed === 'true') where.price = { not: null };
+
+      const [nfts, total] = await Promise.all([
+        prisma.nft.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take,
+          include: { creator: { select: { address: true, avatar: true } } },
+        }),
+        prisma.nft.count({ where }),
+      ]);
+
+      const data = nfts.map((nft) => ({
+        ...nft,
+        fileGatewayUrl: ipfsService.toGatewayURL(nft.fileUri),
+        metadataGatewayUrl: ipfsService.toGatewayURL(nft.metadataUri),
+      }));
+
+      res.json({
+        success: true,
+        data,
+        pagination: { page: skip / take + 1, limit: take, total, totalPages: Math.ceil(total / take) },
+      });
+    } catch (error: any) {
+      console.error('List NFTs error:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch NFTs' });
+    }
+  }
+
+  async getById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const nft = await prisma.nft.findUnique({
+        where: { id },
+        include: { creator: { select: { address: true, avatar: true } } },
+      });
+
+      if (!nft) {
+        return res.status(404).json({ error: 'NFT not found' });
+      }
+
+      res.json({
+        success: true,
+        data: { ...nft, fileGatewayUrl: ipfsService.toGatewayURL(nft.fileUri), metadataGatewayUrl: ipfsService.toGatewayURL(nft.metadataUri) },
+      });
+    } catch (error: any) {
+      console.error('Get NFT error:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch NFT' });
+    }
+  }
+
   async uploadToIPFS(req: Request, res: Response) {
     try {
       if (!req.user?.address) {
@@ -17,7 +79,7 @@ export class NFTController {
         return res.status(400).json({ error: 'No file provided' });
       }
 
-      const { name, description, category, royalties, properties, chainId, contractAddress } = req.body;
+      const { name, description, category, royalties, properties, chainId, contractAddress, collectionId, price, currency } = req.body;
 
       if (!name) {
         return res.status(400).json({ error: 'Name is required' });
@@ -60,7 +122,10 @@ export class NFTController {
           metadataUri: metadataIPFSUri,
           royaltyBps,
           chainId: chainId ? parseInt(chainId) : 11155111,
-          contractAddress: contractAddress || '0x45aA14387e9694CD8175D20fD8B69AB6533C83D6',
+          contractAddress: contractAddress || '0x8273737C2bd56b16a97D99F66Ed1Be155f7dd5FE',
+          collectionId: collectionId || null,
+          price: price ? parseFloat(price) : null,
+          currency: currency || null,
           creatorAddress: req.user.address,
         },
       });
@@ -82,6 +147,39 @@ export class NFTController {
         error: 'Failed to upload to IPFS',
         message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
+    }
+  }
+
+  async markSold(req: Request, res: Response) {
+    try {
+      const { tokenId } = req.params;
+      const { buyerAddress } = req.body;
+
+      if (!buyerAddress) {
+        return res.status(400).json({ error: 'buyerAddress is required' });
+      }
+
+      const nft = await prisma.nft.findFirst({
+        where: { tokenId: parseInt(tokenId) },
+      });
+
+      if (!nft) {
+        return res.status(404).json({ error: 'NFT not found' });
+      }
+
+      const updated = await prisma.nft.update({
+        where: { id: nft.id },
+        data: {
+          ownerAddress: buyerAddress.toLowerCase(),
+          price: null,
+          currency: null,
+        },
+      });
+
+      res.json({ success: true, data: updated });
+    } catch (error: any) {
+      console.error('Mark sold error:', error);
+      res.status(500).json({ success: false, error: 'Failed to mark NFT as sold' });
     }
   }
 

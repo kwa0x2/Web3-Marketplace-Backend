@@ -29,9 +29,14 @@ export function createNFTRoutes(): Router {
   const router = Router();
   const nftController = new NFTController();
 
+  // Public routes
+  router.get('/', (req, res) => nftController.list(req, res));
+  router.get('/:id', (req, res) => nftController.getById(req, res));
+
   // Protected routes
   router.post('/upload', authMiddleware, upload.single('file'), (req, res) => nftController.uploadToIPFS(req, res));
   router.patch('/:id/mint', authMiddleware, (req, res) => nftController.updateMintDetails(req, res));
+  router.patch('/token/:tokenId/sold', (req, res) => nftController.markSold(req, res));
 
   return router;
 }
