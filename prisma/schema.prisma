@@ -38,6 +38,7 @@ model Collection {
   symbol          String   @db.VarChar(10)
   description     String?  @db.VarChar(1000)
   image           String?
+  banner          String?
   verified        Boolean  @default(false)
 
   ownerAddress    String   @db.VarChar(42)

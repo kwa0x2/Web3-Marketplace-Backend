@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { IPFSService } from '../services/ipfs.service';
 
 const prisma = new PrismaClient();
+const ipfsService = new IPFSService();
 
 export class CollectionController {
   async list(_req: Request, res: Response) {
@@ -58,13 +60,37 @@ export class CollectionController {
         where: { id: req.params.id },
         include: {
           owner: { select: { address: true, avatar: true } },
-          nfts: { orderBy: { createdAt: 'desc' } },
+          nfts: {
+            orderBy: { createdAt: 'desc' },
+            include: { creator: { select: { address: true, avatar: true } } },
+          },
         },
       });
 
       if (!col) return res.status(404).json({ error: 'Collection not found' });
 
-      res.json({ success: true, data: col });
+      const nfts = col.nfts.map((nft) => ({
+        ...nft,
+        fileGatewayUrl: ipfsService.toGatewayURL(nft.fileUri),
+        metadataGatewayUrl: ipfsService.toGatewayURL(nft.metadataUri),
+      }));
+
+      const listedNfts = col.nfts.filter((n) => n.price !== null);
+      const floorPrice = listedNfts.length > 0
+        ? Math.min(...listedNfts.map((n) => n.price!))
+        : 0;
+      const totalVolume = listedNfts.reduce((sum, n) => sum + (n.price ?? 0), 0);
+      const owners = new Set(col.nfts.map((n) => n.creatorAddress));
+
+      const stats = {
+        totalItems: col.nfts.length,
+        listedCount: listedNfts.length,
+        ownerCount: owners.size,
+        floorPrice,
+        totalVolume,
+      };
+
+      res.json({ success: true, data: { ...col, nfts, stats } });
     } catch (error: any) {
       console.error('Get collection error:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch collection' });
@@ -75,7 +101,7 @@ export class CollectionController {
     try {
       if (!req.user?.address) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { name, symbol, description, image } = req.body;
+      const { name, symbol, description, image, banner } = req.body;
       if (!name || !symbol) return res.status(400).json({ error: 'Name and symbol are required' });
 
       const collection = await prisma.collection.create({
@@ -84,6 +110,7 @@ export class CollectionController {
           symbol: symbol.toUpperCase(),
           description: description || null,
           image: image || null,
+          banner: banner || null,
           ownerAddress: req.user.address,
         },
       });
