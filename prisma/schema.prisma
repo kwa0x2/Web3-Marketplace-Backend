@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "darwin-arm64"]
 }
 
 datasource db {
@@ -79,6 +80,7 @@ model Nft {
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
 
   @@index([creatorAddress])
   @@index([collectionId])
